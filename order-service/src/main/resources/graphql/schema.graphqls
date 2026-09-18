@@ -1,0 +1,37 @@
+type Query {
+  order(id: ID!): Order
+  orders: [Order!]!
+}
+
+type Order {
+  id: ID!
+  customerId: String!
+  status: OrderStatus!
+  fulfillmentType: FulfillmentType!
+  currency: String!
+  totalAmount: String!
+  items: [OrderItem!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type OrderItem {
+  sku: String!
+  quantity: Int!
+  unitPrice: String!
+}
+
+enum OrderStatus {
+  CREATED
+  VALIDATED
+  PAYMENT_PENDING
+  PAID
+  SHIPMENT_PENDING
+  SHIPPED
+  FAILED
+}
+
+enum FulfillmentType {
+  DIGITAL
+  PHYSICAL
+}

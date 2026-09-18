@@ -1,0 +1,62 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/flowforge}
+    username: ${SPRING_DATASOURCE_USERNAME:flowforge}
+    password: ${SPRING_DATASOURCE_PASSWORD:flowforge}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  graphql:
+    graphiql:
+      enabled: true
+    schema:
+      file-extensions: .graphqls
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+camel:
+  springboot:
+    name: order-camel
+
+logging:
+  pattern:
+    console: "%d{ISO8601} [%thread] %-5level correlationId=%X{correlationId} %logger{36} - %msg%n"
+
+app:
+  kafka:
+    order-events-topic: ${ORDER_EVENTS_TOPIC:order.events}
+  outbox:
+    publish-enabled: ${OUTBOX_PUBLISH_ENABLED:true}
+    poll-interval-ms: 1000
