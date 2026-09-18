@@ -16,6 +16,7 @@ public record OrderResponse(
         String currency,
         BigDecimal totalAmount,
         List<OrderItemResponse> items,
+        List<TimelineEntryResponse> timeline,
         Instant createdAt,
         Instant updatedAt
 ) {

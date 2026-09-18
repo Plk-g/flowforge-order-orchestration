@@ -11,16 +11,27 @@ spring:
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
 
 app:
+  processing-delay-ms: 1500
   kafka:
     order-events-topic: ${ORDER_EVENTS_TOPIC:order.events}
+    payment-events-topic: ${PAYMENT_EVENTS_TOPIC:payment.events}
 
 logging:
   pattern:

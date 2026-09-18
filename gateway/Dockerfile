@@ -5,10 +5,12 @@ COPY platform/pom.xml platform/pom.xml
 COPY order-service/pom.xml order-service/pom.xml
 COPY gateway/pom.xml gateway/pom.xml
 COPY payment-service/pom.xml payment-service/pom.xml
+COPY shipment-service/pom.xml shipment-service/pom.xml
 COPY platform platform
 COPY order-service order-service
 COPY gateway gateway
 COPY payment-service payment-service
+COPY shipment-service shipment-service
 RUN mvn -q -pl gateway -am package -DskipTests
 
 FROM eclipse-temurin:21-jre

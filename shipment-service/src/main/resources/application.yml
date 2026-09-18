@@ -1,0 +1,38 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: shipment-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: shipment-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+app:
+  processing-delay-ms: 1500
+  kafka:
+    payment-events-topic: ${PAYMENT_EVENTS_TOPIC:payment.events}
+    shipment-events-topic: ${SHIPMENT_EVENTS_TOPIC:shipment.events}
+
+logging:
+  pattern:
+    console: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"

@@ -38,6 +38,14 @@ services:
       timeout: 10s
       retries: 12
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+
   order-service:
     build:
       context: .
@@ -47,6 +55,7 @@ services:
       SPRING_DATASOURCE_USERNAME: flowforge
       SPRING_DATASOURCE_PASSWORD: flowforge
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     ports:
       - "8081:8081"
     depends_on:
@@ -61,8 +70,22 @@ services:
       dockerfile: payment-service/Dockerfile
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     ports:
       - "8082:8082"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  shipment-service:
+    build:
+      context: .
+      dockerfile: shipment-service/Dockerfile
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+    ports:
+      - "8083:8083"
     depends_on:
       kafka:
         condition: service_healthy
@@ -73,7 +96,18 @@ services:
       dockerfile: gateway/Dockerfile
     environment:
       ORDER_SERVICE_URI: http://order-service:8081
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     ports:
       - "8080:8080"
     depends_on:
       - order-service
+
+  web:
+    build:
+      context: ./web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway

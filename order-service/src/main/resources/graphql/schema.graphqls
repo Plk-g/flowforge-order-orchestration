@@ -11,6 +11,7 @@ type Order {
   currency: String!
   totalAmount: String!
   items: [OrderItem!]!
+  timeline: [TimelineEntry!]!
   createdAt: String!
   updatedAt: String!
 }
@@ -19,6 +20,12 @@ type OrderItem {
   sku: String!
   quantity: Int!
   unitPrice: String!
+}
+
+type TimelineEntry {
+  status: OrderStatus!
+  detail: String!
+  occurredAt: String!
 }
 
 enum OrderStatus {

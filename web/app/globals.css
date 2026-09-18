@@ -1,0 +1,25 @@
+html, body {
+  padding: 0;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #1c3d4a 0%, transparent 55%),
+    radial-gradient(900px 500px at 110% 10%, #3d2a12 0%, transparent 50%),
+    #0b1116;
+  color: #e8eef2;
+}
+
+a { color: inherit; }
+
+th, td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid #24343c;
+}

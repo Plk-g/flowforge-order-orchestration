@@ -8,8 +8,10 @@ import com.flowforge.order.api.dto.OrderItemRequest;
 import com.flowforge.order.api.dto.OrderResponse;
 import com.flowforge.order.domain.OrderEntity;
 import com.flowforge.order.domain.OrderItemEntity;
+import com.flowforge.order.domain.OrderTimelineEntity;
 import com.flowforge.order.domain.OutboxEntity;
 import com.flowforge.order.persistence.OrderRepository;
+import com.flowforge.order.persistence.OrderTimelineRepository;
 import com.flowforge.order.persistence.OutboxRepository;
 import com.flowforge.platform.domain.OrderStatus;
 import com.flowforge.platform.event.OrderCreatedEvent;
@@ -27,15 +29,18 @@ public class OrderPersistenceService {
 
     private final OrderRepository orderRepository;
     private final OutboxRepository outboxRepository;
+    private final OrderTimelineRepository timelineRepository;
     private final ObjectMapper objectMapper;
 
     public OrderPersistenceService(
             OrderRepository orderRepository,
             OutboxRepository outboxRepository,
+            OrderTimelineRepository timelineRepository,
             ObjectMapper objectMapper
     ) {
         this.orderRepository = orderRepository;
         this.outboxRepository = outboxRepository;
+        this.timelineRepository = timelineRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -65,6 +70,9 @@ public class OrderPersistenceService {
             order.addItem(item);
         }
         orderRepository.save(order);
+        append(order, OrderStatus.CREATED, "Order accepted");
+        append(order, OrderStatus.VALIDATED, "Camel route validated items and totals");
+        append(order, OrderStatus.PAYMENT_PENDING, "ORDER_CREATED queued on the outbox");
 
         OrderCreatedEvent event = OrderCreatedEvent.of(
                 orderId,
@@ -83,19 +91,32 @@ public class OrderPersistenceService {
         outbox.setAttempts(0);
         outboxRepository.save(outbox);
 
-        return OrderMapper.toResponse(order);
+        return toResponse(order);
     }
 
     @Transactional(readOnly = true)
     public OrderResponse getOrder(UUID id) {
-        return orderRepository.findById(id)
-                .map(OrderMapper::toResponse)
+        OrderEntity order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException("Order %s was not found".formatted(id)));
+        return toResponse(order);
     }
 
     @Transactional(readOnly = true)
     public List<OrderResponse> listOrders() {
-        return orderRepository.findAll().stream().map(OrderMapper::toResponse).toList();
+        return orderRepository.findAll().stream().map(this::toResponse).toList();
+    }
+
+    OrderResponse toResponse(OrderEntity order) {
+        return OrderMapper.toResponse(order, timelineRepository.findByOrderIdOrderByOccurredAtAscIdAsc(order.getId()));
+    }
+
+    void append(OrderEntity order, OrderStatus status, String detail) {
+        OrderTimelineEntity entry = new OrderTimelineEntity();
+        entry.setOrder(order);
+        entry.setStatus(status);
+        entry.setDetail(detail);
+        entry.setOccurredAt(Instant.now());
+        timelineRepository.save(entry);
     }
 
     private String writePayload(OrderCreatedEvent event) {

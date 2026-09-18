@@ -32,6 +32,10 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 management:
   endpoints:
@@ -41,6 +45,12 @@ management:
   endpoint:
     health:
       show-details: never
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
 
 springdoc:
   swagger-ui:
@@ -56,7 +66,10 @@ logging:
 
 app:
   kafka:
+    consume-enabled: ${KAFKA_CONSUME_ENABLED:true}
     order-events-topic: ${ORDER_EVENTS_TOPIC:order.events}
+    payment-events-topic: ${PAYMENT_EVENTS_TOPIC:payment.events}
+    shipment-events-topic: ${SHIPMENT_EVENTS_TOPIC:shipment.events}
   outbox:
     publish-enabled: ${OUTBOX_PUBLISH_ENABLED:true}
     poll-interval-ms: 1000

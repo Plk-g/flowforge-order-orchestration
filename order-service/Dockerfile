@@ -5,11 +5,12 @@ COPY platform/pom.xml platform/pom.xml
 COPY order-service/pom.xml order-service/pom.xml
 COPY gateway/pom.xml gateway/pom.xml
 COPY payment-service/pom.xml payment-service/pom.xml
-RUN mvn -q -DskipTests dependency:go-offline || true
+COPY shipment-service/pom.xml shipment-service/pom.xml
 COPY platform platform
 COPY order-service order-service
 COPY gateway gateway
 COPY payment-service payment-service
+COPY shipment-service shipment-service
 RUN mvn -q -pl order-service -am package -DskipTests
 
 FROM eclipse-temurin:21-jre

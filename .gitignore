@@ -9,3 +9,5 @@ target/
 .gradle/
 build/
 node_modules/
+web/.next/
+web/.vercel/

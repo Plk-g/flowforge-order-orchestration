@@ -3,6 +3,7 @@ package com.flowforge.order;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowforge.order.persistence.OutboxRepository;
+import com.flowforge.order.service.OrderStatusService;
 import com.flowforge.platform.event.OrderEventType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,8 @@ class OrderFlowTest {
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("spring.flyway.enabled", () -> "false");
         registry.add("app.outbox.publish-enabled", () -> "false");
+        registry.add("app.kafka.consume-enabled", () -> "false");
+        registry.add("management.tracing.enabled", () -> "false");
         registry.add("spring.autoconfigure.exclude", () ->
                 "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration");
     }
@@ -48,6 +51,9 @@ class OrderFlowTest {
 
     @Autowired
     OutboxRepository outboxRepository;
+
+    @Autowired
+    OrderStatusService orderStatusService;
 
     @Test
     void createOrderThenQueryViaGraphql() throws Exception {
@@ -80,7 +86,7 @@ class OrderFlowTest {
 
         String graphql = """
                 {
-                  "query": "query($id: ID!) { order(id: $id) { id status customerId totalAmount items { sku quantity } } }",
+                  "query": "query($id: ID!) { order(id: $id) { id status customerId totalAmount items { sku quantity } timeline { status detail } } }",
                   "variables": { "id": "%s" }
                 }
                 """.formatted(orderId);
@@ -99,6 +105,13 @@ class OrderFlowTest {
         assertThat(order.path("status").asText()).isEqualTo("PAYMENT_PENDING");
         assertThat(order.path("customerId").asText()).isEqualTo("cust-42");
         assertThat(order.path("items")).hasSize(1);
+        assertThat(order.path("timeline")).hasSize(3);
+
+        orderStatusService.markPaid(java.util.UUID.fromString(orderId), "Payment authorized in test");
+        ResponseEntity<String> afterPay = restTemplate.getForEntity(url("/api/orders/" + orderId), String.class);
+        JsonNode paid = objectMapper.readTree(afterPay.getBody());
+        assertThat(paid.get("status").asText()).isEqualTo("SHIPMENT_PENDING");
+        assertThat(paid.get("timeline").size()).isGreaterThanOrEqualTo(5);
     }
 
     @Test

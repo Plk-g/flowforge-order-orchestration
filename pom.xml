@@ -23,6 +23,7 @@
         <module>order-service</module>
         <module>gateway</module>
         <module>payment-service</module>
+        <module>shipment-service</module>
     </modules>
 
     <properties>

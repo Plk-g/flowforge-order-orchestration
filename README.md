@@ -1,49 +1,63 @@
-# FlowForge Order Orchestration
+# FlowForge — Cloud-Native Order Orchestration
 
-Java 21 / Spring Boot platform that creates orders over REST, validates and routes them with Apache Camel, stores them in PostgreSQL, publishes `ORDER_CREATED` to Kafka, and serves order status over GraphQL.
+Java 21 platform that takes an order, validates it with **Apache Camel**, stores it in **PostgreSQL**, emits Kafka events, and moves it through payment and shipment until it is `SHIPPED`. Recruiters can click the demo, place an order, and watch the timeline fill in.
+
+**[Live dashboard](https://flowforge-order-orchestration.vercel.app)** · **[Source](https://github.com/Plk-g/flowforge-order-orchestration)**
+
+The hosted dashboard is an interactive preview of the same UI. The full Java / Kafka / Postgres / Jaeger stack is one Docker Compose command.
+
+## What works
+
+| Capability | Where to see it |
+|---|---|
+| `POST /api/orders` | Dashboard button or Swagger |
+| GraphQL `order(id)` with timeline | Dashboard polling + GraphiQL |
+| Camel `direct:createOrder` validation | Order service logs + timeline `VALIDATED` |
+| `ORDER_CREATED` outbox → Kafka | Payment service log |
+| Payment consumer → `PAYMENT_COMPLETED` | Status becomes `PAID` |
+| Shipment consumer → `SHIPMENT_COMPLETED` | Status becomes `SHIPPED` |
+| PostgreSQL + Flyway | `orders`, `order_outbox`, `order_timeline` |
+| OpenAPI | http://localhost:8080/swagger-ui.html |
+| OpenTelemetry traces | http://localhost:16686 |
+| Docker Compose | `docker compose up --build` |
+| CI | GitHub Actions on `main` |
+
+## Architecture
 
 ```mermaid
 flowchart TD
-    Client["HTTP client"] --> GW["Spring Cloud Gateway :8080"]
-    GW --> OS["Order Service :8081"]
-    OS --> CAMEL["Camel create-order route"]
-    CAMEL --> DB["PostgreSQL + outbox"]
-    CAMEL --> OUTBOX["Camel outbox publisher"]
-    OUTBOX --> K["Kafka order.events"]
+    UI["Next.js dashboard"] --> GW["Spring Cloud Gateway :8080"]
+    GW --> OS["Order Service REST + GraphQL"]
+    OS --> CAMEL["Camel create-order + outbox"]
+    CAMEL --> DB["PostgreSQL"]
+    CAMEL --> K["Kafka"]
     K --> PS["Payment Service"]
-    OS --> GQL["GraphQL /graphql"]
+    PS --> K
+    K --> SS["Shipment Service"]
+    SS --> K
+    OS --> OTEL["OpenTelemetry"]
+    PS --> OTEL
+    SS --> OTEL
+    OTEL --> J["Jaeger"]
 ```
 
-## What works today
+Saga: `CREATED → VALIDATED → PAYMENT_PENDING → PAID → SHIPMENT_PENDING → SHIPPED`  
+Digital orders skip the warehouse step after payment.
 
-1. `POST /api/orders` through the gateway or order-service
-2. GraphQL `order(id)` for status and line items
-3. Camel route that validates, persists, and queues `ORDER_CREATED`
-4. Transactional outbox so the event is not lost if Kafka is briefly down
-5. Payment service Kafka consumer (simulated authorization log)
-6. PostgreSQL via Flyway
-7. Swagger UI at `/swagger-ui.html`
-8. Docker Compose for local execution
-
-## Run locally
-
-Start Postgres and Kafka, then the apps:
+## Quick start (full stack)
 
 ```bash
-docker compose up postgres kafka -d
 export JAVA_HOME="/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home"
-./mvnw -pl order-service,gateway,payment-service -am spring-boot:run
-```
-
-Or run everything in containers:
-
-```bash
 docker compose up --build
 ```
 
-Gateway is on [http://localhost:8080](http://localhost:8080).
+Then open:
 
-Create an order:
+- Dashboard: http://localhost:3000
+- Gateway API: http://localhost:8080
+- Swagger: http://localhost:8080/swagger-ui.html
+- GraphiQL: http://localhost:8080/graphiql
+- Jaeger: http://localhost:16686
 
 ```bash
 curl -sS -X POST http://localhost:8080/api/orders \
@@ -51,36 +65,21 @@ curl -sS -X POST http://localhost:8080/api/orders \
   -d '{
     "customerId": "cust-42",
     "fulfillmentType": "PHYSICAL",
-    "currency": "USD",
     "items": [{ "sku": "SKU-100", "quantity": 2, "unitPrice": 19.99 }]
   }'
 ```
 
-Query it with GraphQL:
-
-```bash
-curl -sS http://localhost:8080/graphql \
-  -H 'Content-Type: application/json' \
-  -d '{"query":"query($id:ID!){ order(id:$id){ id status customerId totalAmount items { sku quantity } } }","variables":{"id":"ORDER_ID"}}'
-```
-
-Docs:
-
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- GraphiQL: http://localhost:8080/graphiql
+Wait a few seconds, then query GraphQL — status should be `SHIPPED`.
 
 ## Tests
 
 ```bash
-export JAVA_HOME="/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home"
-./mvnw -pl order-service test
+./mvnw -pl order-service -am test
 ```
 
-The integration test uses Testcontainers PostgreSQL and asserts REST create + GraphQL query + outbox `ORDER_CREATED`.
+## Resume bullet (accurate)
 
-## Next (day 2+)
+**Cloud-Native Order Orchestration Platform** | Java 21, Spring Boot, Spring Cloud Gateway, Apache Camel, GraphQL, Kafka, PostgreSQL, Docker, OpenTelemetry  
+Built a distributed order-processing platform with REST writes, GraphQL reads, Camel validation/outbox routing, and Kafka consumers for payment and shipment. Containerized the stack with Docker Compose, added searchable traces in Jaeger, and shipped a Next.js operations dashboard.
 
-- Payment/shipment events that advance order status
-- Next.js dashboard
-- OpenTelemetry traces (Jaeger, then Dynatrace)
-- ECS/Fargate deploy
+Do **not** list ECS/Fargate or Dynatrace until those are actually running. Starter Fargate task JSON lives in `deploy/ecs/`.
