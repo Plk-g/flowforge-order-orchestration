@@ -2,9 +2,17 @@
 
 Java 21 platform that takes an order, validates it with **Apache Camel**, stores it in **PostgreSQL**, emits Kafka events, and moves it through payment and shipment until it is `SHIPPED`. Recruiters can click the demo, place an order, and watch the timeline fill in.
 
-**[Live dashboard](https://flowforge-order-orchestration.vercel.app)** · **[Source](https://github.com/Plk-g/flowforge-order-orchestration)**
+**[GitHub repo](https://github.com/Plk-g/flowforge-order-orchestration)** · click **What works** below
 
-The hosted dashboard is an interactive preview of the same UI. The full Java / Kafka / Postgres / Jaeger stack is one Docker Compose command.
+Interactive UI (no Java required):
+
+```bash
+cd web && npm install && npm run dev
+```
+
+Open http://localhost:3000, place an order, and watch it move to `SHIPPED`.
+
+To put a public URL on your resume, import this GitHub repo in [Vercel](https://vercel.com/new) with **Root Directory = `web`**. Vercel team auth was not available from this session, so the production URL is not created yet.
 
 ## What works
 
